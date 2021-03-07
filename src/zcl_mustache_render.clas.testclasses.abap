@@ -97,10 +97,11 @@ class ltcl_mustache_render implementation.
     data:
           ls_statics      type zcl_mustache_render=>ty_context,
           ls_simple       type zcl_mustache_test=>ty_dummy,
-          lt_complex      type zif_mustache=>ty_struc_tt,
+          lt_complex1     type zif_mustache=>ty_struc_tt,
+          lt_complex2     type zif_mustache=>ty_struc_tt,
           lv_count        type i,
           lv_idx          type i,
-          iv_complex_test type abap_bool,
+          iv_complex_test type c,
           lv_exp          type string,
           lv_act          type string,
           lt_act          type string_table,
@@ -108,7 +109,8 @@ class ltcl_mustache_render implementation.
 
     zcl_mustache_test=>get_test_case( importing ev_count = lv_count ).
     zcl_mustache_test=>get_test_data( importing es_simple   = ls_simple
-                                                et_complex  = lt_complex ).
+                                                et_complex1  = lt_complex1
+                                                et_complex2  = lt_complex2 ).
     ls_statics-x_format = cl_abap_format=>e_html_text.
 
     do lv_count times.
@@ -123,11 +125,18 @@ class ltcl_mustache_render implementation.
 
       clear lt_act.
       try .
-          if iv_complex_test = abap_true.
+          if iv_complex_test = '1'.
             zcl_mustache_render=>render_section(
               exporting
                 is_statics = ls_statics
-                i_data     = lt_complex
+                i_data     = lt_complex1
+              changing
+                ct_lines   = lt_act ).
+          elseif iv_complex_test = '2'.
+            zcl_mustache_render=>render_section(
+              exporting
+                is_statics = ls_statics
+                i_data     = lt_complex2
               changing
                 ct_lines   = lt_act ).
           else.

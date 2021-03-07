@@ -30,6 +30,9 @@ class zcl_mustache_render definition
         !it_data_stack type zif_mustache=>ty_ref_tt optional
         !iv_start_idx type i default 1
         !iv_path type string default '/'
+        !iv_cond type zif_mustache=>ty_token-cond default zif_mustache=>c_section_condition-if
+        !iv_first type abap_bool optional
+        !iv_last type abap_bool optional
       changing
         !ct_lines type string_table
       raising
@@ -40,6 +43,8 @@ class zcl_mustache_render definition
         !it_data_stack type zif_mustache=>ty_ref_tt
         !iv_start_idx type i
         !iv_path type string
+        !iv_first type abap_bool optional
+        !iv_last type abap_bool optional
       changing
         !ct_lines type string_table
       raising
@@ -296,10 +301,16 @@ CLASS ZCL_MUSTACHE_RENDER IMPLEMENTATION.
           append lv_val to lt_buf.
 
         when zif_mustache=>c_token_type-section.
-          lr = find_walker( iv_name       = <token>-content
-                            it_data_stack = it_data_stack
-                            iv_level      = lines( it_data_stack ) ). " Start from deepest level
-          assign lr->* to <field>.
+          if <token>-content = '@first'.
+            assign iv_first to <field>.
+          elseif <token>-content = '@last'.
+            assign iv_last to <field>.
+          else.
+            lr = find_walker( iv_name       = <token>-content
+                              it_data_stack = it_data_stack
+                              iv_level      = lines( it_data_stack ) ). " Start from deepest level
+            assign lr->* to <field>.
+          endif.
 
           if abap_true = eval_condition( iv_var = <field> iv_cond = <token>-cond ).
             render_section(
@@ -309,6 +320,7 @@ CLASS ZCL_MUSTACHE_RENDER IMPLEMENTATION.
                 iv_start_idx  = lv_idx + 1
                 i_data        = <field>
                 iv_path       = iv_path && <token>-content && '/'
+                iv_cond       = <token>-cond
               changing
                 ct_lines      = lt_buf ).
           endif.
@@ -438,7 +450,7 @@ CLASS ZCL_MUSTACHE_RENDER IMPLEMENTATION.
 
     if lv_type ca c_data_type-struc
        or lv_type ca c_data_type-elem
-       or lv_unitab = abap_true.
+       or lv_unitab = abap_true or iv_cond = zif_mustache=>c_section_condition-ifnot.
 
       " Update context
       lt_data_stack = it_data_stack.
@@ -454,6 +466,8 @@ CLASS ZCL_MUSTACHE_RENDER IMPLEMENTATION.
           it_data_stack = lt_data_stack
           iv_start_idx  = iv_start_idx
           iv_path       = iv_path
+          iv_first      = iv_first
+          iv_last       = iv_last
         changing
           ct_lines      = ct_lines ).
 
@@ -471,6 +485,9 @@ CLASS ZCL_MUSTACHE_RENDER IMPLEMENTATION.
             iv_start_idx  = iv_start_idx
             i_data        = <tabline>
             iv_path       = iv_path
+            iv_cond       = iv_cond
+            iv_first      = xsdbool( sy-tabix = 1 )
+            iv_last       = xsdbool( sy-tabix = lines( <table> ) )
         changing
           ct_lines        = ct_lines ).
       endloop.
