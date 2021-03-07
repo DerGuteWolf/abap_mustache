@@ -11,6 +11,10 @@ class zcl_mustache_render definition
           partials   type zif_mustache=>ty_partial_tt,
           x_format   type zif_mustache=>ty_x_format,
           part_depth type i,
+          date_format type i,
+          time_format type i,
+          timestamp_format type i,
+          timestamp_timezone type tznzone,
         end of ty_context .
 
     " Max depth of partials recursion, feel free to change for your needs
@@ -53,6 +57,7 @@ class zcl_mustache_render definition
       importing
         !iv_name type string
         !it_data_stack type zif_mustache=>ty_ref_tt
+        !is_statics type ty_context
       returning
         value(rv_val) type string
       raising
@@ -138,7 +143,17 @@ CLASS ZCL_MUSTACHE_RENDER IMPLEMENTATION.
     lv_type = cl_abap_datadescr=>get_data_type_kind( <field> ).
 
     if lv_type ca c_data_type-elem. " Element data type
-      rv_val = |{ <field> }|.
+      if lv_type = cl_abap_datadescr=>typekind_date.
+        rv_val = |{ CONV d( <field> ) DATE = (is_statics-date_format) }|.
+      elseif lv_type = cl_abap_datadescr=>typekind_time.
+        rv_val = |{ CONV t( <field> ) TIME = (is_statics-time_format) }|.
+      elseif t->absolute_name = '\TYPE=TIMESTAMP' or ( lv_type = cl_abap_datadescr=>typekind_packed and t->length = 8 and t->decimals = 0 and t->is_ddic_type( ) = abap_true and t->get_ddic_header( )-refname cp '*TZNTSTMP*' ).
+        rv_val = |{ CONV timestamp( <field> ) TIMESTAMP = (is_statics-timestamp_format) TIMEZONE = is_statics-timestamp_timezone }|.
+      elseif t->absolute_name = '\TYPE=TIMESTAMPL' or ( lv_type = cl_abap_datadescr=>typekind_packed and t->length = 11 and t->decimals = 7 and t->is_ddic_type( ) = abap_true and t->get_ddic_header( )-refname cp '*TZNTSTMPL*' ).
+        rv_val = |{ CONV timestampl( <field> ) TIMESTAMP = (is_statics-timestamp_format) TIMEZONE = is_statics-timestamp_timezone }|.
+      else.
+        rv_val = |{ <field> }|.
+      endif.
     elseif lv_type ca c_data_type-oref. " Object or interface instance
       rv_val = render_oref( iv_tag_name = iv_name io_obj = <field> ).
     else.
@@ -294,7 +309,7 @@ CLASS ZCL_MUSTACHE_RENDER IMPLEMENTATION.
           endif.
 
         when zif_mustache=>c_token_type-etag or zif_mustache=>c_token_type-utag.  " Single tag
-          lv_val  = find_value( iv_name = <token>-content  it_data_stack = it_data_stack ).
+          lv_val  = find_value( iv_name = <token>-content  it_data_stack = it_data_stack  is_statics = is_statics ).
           if <token>-type = zif_mustache=>c_token_type-etag and is_statics-x_format is not initial.
             lv_val = escape( val = lv_val format = is_statics-x_format ).
           endif.

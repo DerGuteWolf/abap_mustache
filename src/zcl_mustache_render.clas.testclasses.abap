@@ -29,7 +29,10 @@ class ltcl_mustache_render implementation.
           ls_dummy      type zif_mustache=>ty_struc,
           lt_dummy      type zif_mustache=>ty_struc_tt,
           lv_act        type string,
-          lx            type ref to zcx_mustache_error.
+          lx            type ref to zcx_mustache_error,
+          lstatics      type zcl_mustache_render=>ty_context.
+
+    lstatics = VALUE #( date_format = cl_abap_format=>d_iso time_format = cl_abap_format=>t_iso timestamp_format = cl_abap_format=>ts_iso timestamp_timezone = 'UTC' ).
 
     ls_dummy-name = 'abc'.
     ls_dummy-val  = '123'.
@@ -41,7 +44,7 @@ class ltcl_mustache_render implementation.
     append lr to lt_data_stack.
 
     try .
-        lv_act = zcl_mustache_render=>find_value( it_data_stack = lt_data_stack iv_name = 'NAME' ).
+        lv_act = zcl_mustache_render=>find_value( it_data_stack = lt_data_stack iv_name = 'NAME' is_statics = lstatics ).
         cl_abap_unit_assert=>assert_equals( exp = 'abc' act = lv_act ).
       catch zcx_mustache_error into lx.
         cl_abap_unit_assert=>fail( lx->msg ).
@@ -53,7 +56,7 @@ class ltcl_mustache_render implementation.
     append lr to lt_data_stack.
 
     try .
-        lv_act = zcl_mustache_render=>find_value( it_data_stack = lt_data_stack iv_name = 'Abc' ).
+        lv_act = zcl_mustache_render=>find_value( it_data_stack = lt_data_stack iv_name = 'Abc' is_statics = lstatics ).
         cl_abap_unit_assert=>assert_equals( exp = '123' act = lv_act ).
       catch zcx_mustache_error into lx.
         cl_abap_unit_assert=>fail( lx->msg ).
@@ -67,9 +70,9 @@ class ltcl_mustache_render implementation.
     append lr to lt_data_stack.
 
     try .
-        lv_act = zcl_mustache_render=>find_value( it_data_stack = lt_data_stack iv_name = 'Abc' ).
+        lv_act = zcl_mustache_render=>find_value( it_data_stack = lt_data_stack iv_name = 'Abc' is_statics = lstatics ).
         cl_abap_unit_assert=>assert_equals( exp = '123' act = lv_act ).
-        lv_act = zcl_mustache_render=>find_value( it_data_stack = lt_data_stack iv_name = 'name' ).
+        lv_act = zcl_mustache_render=>find_value( it_data_stack = lt_data_stack iv_name = 'name' is_statics = lstatics ).
         cl_abap_unit_assert=>assert_equals( exp = 'abc' act = lv_act ).
       catch zcx_mustache_error into lx.
         cl_abap_unit_assert=>fail( lx->msg ).
@@ -83,12 +86,58 @@ class ltcl_mustache_render implementation.
     append lr to lt_data_stack.
 
     try .
-        lv_act = zcl_mustache_render=>find_value( it_data_stack = lt_data_stack iv_name = 'attr-age' ).
+        lv_act = zcl_mustache_render=>find_value( it_data_stack = lt_data_stack iv_name = 'attr-age' is_statics = lstatics ).
         cl_abap_unit_assert=>assert_equals( exp = '10' act = lv_act ).
       catch zcx_mustache_error into lx.
         cl_abap_unit_assert=>fail( lx->msg ).
     endtry.
 
+    "5----------------
+    types:
+      begin of ty_attr,
+        integer type i,
+        date type d,
+        time type t,
+        timestamp type timestamp,
+        timestampl type timestampl,
+      end of ty_attr.
+    data ls_attr type ty_attr.
+    ls_attr-date = '19670625'.
+    ls_attr-time = '193045'.
+    ls_attr-timestamp = '19670625193045'.
+    ls_attr-timestampl = '19670625193045'.
+    ls_attr-integer = 123.
+    clear lt_data_stack.
+    get reference of ls_attr into lr.
+    append lr to lt_data_stack.
+
+    try .
+        lv_act = zcl_mustache_render=>find_value( it_data_stack = lt_data_stack iv_name = 'date' is_statics = lstatics ).
+        cl_abap_unit_assert=>assert_equals( exp = '1967-06-25' act = lv_act ).
+      catch zcx_mustache_error into lx.
+        cl_abap_unit_assert=>fail( lx->msg ).
+    endtry.
+
+    try .
+        lv_act = zcl_mustache_render=>find_value( it_data_stack = lt_data_stack iv_name = 'time' is_statics = lstatics ).
+        cl_abap_unit_assert=>assert_equals( exp = '19:30:45' act = lv_act ).
+      catch zcx_mustache_error into lx.
+        cl_abap_unit_assert=>fail( lx->msg ).
+    endtry.
+
+    try .
+        lv_act = zcl_mustache_render=>find_value( it_data_stack = lt_data_stack iv_name = 'timestamp' is_statics = lstatics ).
+        cl_abap_unit_assert=>assert_equals( exp = '1967-06-25T19:30:45' act = lv_act ).
+      catch zcx_mustache_error into lx.
+        cl_abap_unit_assert=>fail( lx->msg ).
+    endtry.
+
+    try .
+        lv_act = zcl_mustache_render=>find_value( it_data_stack = lt_data_stack iv_name = 'timestampl' is_statics = lstatics ).
+        cl_abap_unit_assert=>assert_equals( exp = '1967-06-25T19:30:45,0000000' act = lv_act ).
+      catch zcx_mustache_error into lx.
+        cl_abap_unit_assert=>fail( lx->msg ).
+    endtry.
 
   endmethod.  " find_value.
 
